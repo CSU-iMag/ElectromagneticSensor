@@ -1,2 +1,4 @@
 # ElectromagneticSensor
 智能车电磁传感器之精密软件检波
+
+基于MK66FX1M0VLQ18实现
