@@ -1,0 +1,7 @@
+*** Using Compiler 'V6.14', folder: 'F:\Keil_v5\ARM\ARMCLANG\Bin'
+Build target 'MagnetSensor'
+Note: source file 'RTE\Device\MK66FX1M0VLQ18\startup_MK66F18.s' - object file renamed from 'debug\startup_MK66F18.o' to 'debug\startup_mk66f18_1.o'.Note: source file 'RTE\Device\MK66FX1M0VLQ18\startup_MK66F18.s' - object file renamed from 'debug\startup_MK66F18.o' to 'debug\startup_mk66f18_1.o'.Note: source file 'RTE\Device\MK66FX1M0VLQ18\system_MK66F18.c' - object file renamed from 'debug\system_MK66F18.o' to 'debug\system_mk66f18_1.o'.compiling main.c...
+linking...
+Program Size: Code=7414 RO-data=2254 RW-data=112 ZI-data=2228  
+"debug\hello_world.out" - 0 Error(s), 0 Warning(s).
+Build Time Elapsed:  00:00:03

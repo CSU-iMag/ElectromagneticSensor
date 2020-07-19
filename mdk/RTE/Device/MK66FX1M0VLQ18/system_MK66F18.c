@@ -1,242 +1,149 @@
-/*
-** ###################################################################
-**     Processors:          MK66FN2M0VLQ18
-**                          MK66FN2M0VMD18
-**                          MK66FX1M0VLQ18
-**                          MK66FX1M0VMD18
-**
-**     Compilers:           Freescale C/C++ for Embedded ARM
-**                          GNU C Compiler
-**                          IAR ANSI C/C++ Compiler for ARM
-**                          Keil ARM C/C++ Compiler
-**                          MCUXpresso Compiler
-**
-**     Reference manual:    K66P144M180SF5RMV2, Rev. 1, Mar 2015
-**     Version:             rev. 3.0, 2015-03-25
-**     Build:               b181105
-**
-**     Abstract:
-**         Provides a system configuration function and a global variable that
-**         contains the system frequency. It configures the device and initializes
-**         the oscillator (PLL) that is part of the microcontroller device.
-**
-**     Copyright 2016 Freescale Semiconductor, Inc.
-**     Copyright 2016-2018 NXP
-**     All rights reserved.
-**
-**     SPDX-License-Identifier: BSD-3-Clause
-**
-**     http:                 www.nxp.com
-**     mail:                 support@nxp.com
-**
-**     Revisions:
-**     - rev. 1.0 (2013-09-02)
-**         Initial version.
-**     - rev. 2.0 (2014-02-17)
-**         Register accessor macros added to the memory map.
-**         Symbols for Processor Expert memory map compatibility added to the memory map.
-**         Startup file for gcc has been updated according to CMSIS 3.2.
-**         Definition of BITBAND macros updated to support peripherals with 32-bit acces disabled.
-**         Update according to reference manual rev. 2
-**     - rev. 2.1 (2014-04-16)
-**         Update of SystemInit() and SystemCoreClockUpdate() functions.
-**     - rev. 2.2 (2014-10-14)
-**         Interrupt INT_LPTimer renamed to INT_LPTMR0, interrupt INT_Watchdog renamed to INT_WDOG_EWM.
-**     - rev. 2.3 (2014-11-20)
-**         Update according to reverence manual K65P169M180SF5RMV2_NDA, Rev. 0 Draft A, October 2014.
-**         Update of SystemInit() to use 16MHz external crystal.
-**     - rev. 2.4 (2015-02-19)
-**         Renamed interrupt vector LLW to LLWU.
-**     - rev. 3.0 (2015-03-25)
-**         Registers updated according to the reference manual revision 1, March 2015
-**
-** ###################################################################
-*/
-
-/*!
- * @file MK66F18
- * @version 3.0
- * @date 2015-03-25
- * @brief Device specific configuration file for MK66F18 (implementation file)
+/*********************************************************************************************************************
+ * COPYRIGHT NOTICE
+ * Copyright (c) 2017,逐飞科技
+ * All rights reserved.
+ * 技术讨论QQ群：179029047
  *
- * Provides a system configuration function and a global variable that contains
- * the system frequency. It configures the device and initializes the oscillator
- * (PLL) that is part of the microcontroller device.
- */
+ * 以下所有内容版权均属逐飞科技所有，未经允许不得用于商业用途，
+ * 欢迎各位使用并传播本程序，修改内容时必须保留逐飞科技的版权声明。
+ *
+ * @file       		system_MK60
+ * @company	   		成都逐飞科技有限公司
+ * @author     		Go For It(1325536866)
+ * @version    		v2.0
+ * @Software 		IAR 7.7 or MDK 5.17
+ * @Target core		MK66FX
+ * @Taobao   		https://seekfree.taobao.com/
+ * @date       		2017-09-19
+ ********************************************************************************************************************/
 
 #include <stdint.h>
-#include "fsl_device_registers.h"
+#include "MK66F18.h"
+#include "MK60_gpio.h"
 
+//-------------------------------------------------------------------------------------------------------------------
+//  MK66FX_CLOCK 为 0  内核频率 180M  总线频率90M   flex_bus频率60M    flash频率25.7M
+//  MK66FX_CLOCK 为 1  内核频率 200M  总线频率100M  flex_bus频率66.6M  flash频率28.5M
+//  MK66FX_CLOCK 为 2  内核频率 220M  总线频率110M  flex_bus频率73.3M  flash频率31.4M
+//-------------------------------------------------------------------------------------------------------------------
+#define MK66FX_CLOCK    0
 
-
-/* ----------------------------------------------------------------------------
-   -- Core clock
-   ---------------------------------------------------------------------------- */
-
-uint32_t SystemCoreClock = DEFAULT_SYSTEM_CLOCK;
-
-/* ----------------------------------------------------------------------------
-   -- SystemInit()
-   ---------------------------------------------------------------------------- */
-
-void SystemInit (void) {
-#if ((__FPU_PRESENT == 1) && (__FPU_USED == 1))
-  SCB->CPACR |= ((3UL << 10*2) | (3UL << 11*2));    /* set CP10, CP11 Full Access */
-#endif /* ((__FPU_PRESENT == 1) && (__FPU_USED == 1)) */
-  /* Watchdog disable */
-#if (DISABLE_WDOG)
-  /* WDOG->UNLOCK: WDOGUNLOCK=0xC520 */
-  WDOG->UNLOCK = WDOG_UNLOCK_WDOGUNLOCK(0xC520); /* Key 1 */
-  /* WDOG->UNLOCK: WDOGUNLOCK=0xD928 */
-  WDOG->UNLOCK = WDOG_UNLOCK_WDOGUNLOCK(0xD928); /* Key 2 */
-  /* WDOG->STCTRLH: ?=0,DISTESTWDOG=0,BYTESEL=0,TESTSEL=0,TESTWDOG=0,?=0,?=1,WAITEN=1,STOPEN=1,DBGEN=0,ALLOWUPDATE=1,WINEN=0,IRQRSTEN=0,CLKSRC=1,WDOGEN=0 */
-  WDOG->STCTRLH = WDOG_STCTRLH_BYTESEL(0x00) |
-                 WDOG_STCTRLH_WAITEN_MASK |
-                 WDOG_STCTRLH_STOPEN_MASK |
-                 WDOG_STCTRLH_ALLOWUPDATE_MASK |
-                 WDOG_STCTRLH_CLKSRC_MASK |
-                 0x0100U;
-#endif /* (DISABLE_WDOG) */
-
-  SystemInitHook();
+void Disable_Wdog(void)
+{
+    // Disable the WDOG module 
+    // WDOG_UNLOCK: WDOGUNLOCK=0xC520 
+    WDOG->UNLOCK = (uint16_t)0xC520u;     // Key 1 
+    // WDOG_UNLOCK : WDOGUNLOCK=0xD928 
+    WDOG->UNLOCK  = (uint16_t)0xD928u;    // Key 2 
+    // WDOG_STCTRLH: ??=0,DISTESTWDOG=0,BYTESEL=0,TESTSEL=0,TESTWDOG=0,??=0,STNDBYEN=1,WAITEN=1,STOPEN=1,DBGEN=0,ALLOWUPDATE=1,WINEN=0,IRQRSTEN=0,CLKSRC=1,WDOGEN=0 
+    WDOG->STCTRLH = (uint16_t)0x01D2u;
 }
 
-/* ----------------------------------------------------------------------------
-   -- SystemCoreClockUpdate()
-   ---------------------------------------------------------------------------- */
+void div_set(void)
+{
+    uint8  temp_c5;
+    uint8  temp_c6;
+    uint32 temp_clkdiv;
+    
 
-void SystemCoreClockUpdate (void) {
-  uint32_t MCGOUTClock;                                                        /* Variable to store output clock frequency of the MCG module */
-  uint16_t Divider;
-  uint8_t tmpC7 = 0;
-
-  if ((MCG->C1 & MCG_C1_CLKS_MASK) == 0x00U) {
-    /* Output of FLL or PLL is selected */
-    if ((MCG->C6 & MCG_C6_PLLS_MASK) == 0x00U) {
-      /* FLL is selected */
-      if ((MCG->C1 & MCG_C1_IREFS_MASK) == 0x00U) {
-        /* External reference clock is selected */
-        switch (MCG->C7 & MCG_C7_OSCSEL_MASK) {
-        case 0x00U:
-          MCGOUTClock = CPU_XTAL_CLK_HZ; /* System oscillator drives MCG clock */
-          break;
-        case 0x01U:
-          MCGOUTClock = CPU_XTAL32k_CLK_HZ; /* RTC 32 kHz oscillator drives MCG clock */
-          break;
-        case 0x02U:
+    switch(MK66FX_CLOCK)
+    {
+        case 0:
+        {
+            temp_clkdiv = (uint32_t)0x01260000u;
+            temp_c5 = MCG_C5_PRDIV0(5-1);
+            temp_c6 = MCG_C6_PLLS(1) | MCG_C6_VDIV0(36-16);
+            
+        }break;
+        
+        case 1:
+        {
+            temp_clkdiv = (uint32_t)0x01260000u;
+            temp_c5 = MCG_C5_PRDIV0(5-1);
+            temp_c6 = MCG_C6_PLLS(1) | MCG_C6_VDIV0(40-16);
+            
+        }break;
+        
+        case 2:
+        {
+            temp_clkdiv = (uint32_t)0x01260000u;
+            temp_c5 = MCG_C5_PRDIV0(5-1);
+            temp_c6 = MCG_C6_PLLS(1) | MCG_C6_VDIV0(44-16);
+            
+        }break;
+        
+        
+        
         default:
-          MCGOUTClock = CPU_INT_IRC_CLK_HZ; /* IRC 48MHz oscillator drives MCG clock */
-          break;
-        }
-        tmpC7 = MCG->C7;
-        if (((MCG->C2 & MCG_C2_RANGE_MASK) != 0x00U) && ((tmpC7 & MCG_C7_OSCSEL_MASK) != 0x01U)) {
-          switch (MCG->C1 & MCG_C1_FRDIV_MASK) {
-          case 0x38U:
-            Divider = 1536U;
-            break;
-          case 0x30U:
-            Divider = 1280U;
-            break;
-          default:
-            Divider = (uint16_t)(32LU << ((MCG->C1 & MCG_C1_FRDIV_MASK) >> MCG_C1_FRDIV_SHIFT));
-            break;
-          }
-        } else {/* ((MCG->C2 & MCG_C2_RANGE_MASK) != 0x00U) */
-          Divider = (uint16_t)(1LU << ((MCG->C1 & MCG_C1_FRDIV_MASK) >> MCG_C1_FRDIV_SHIFT));
-        }
-        MCGOUTClock = (MCGOUTClock / Divider); /* Calculate the divided FLL reference clock */
-      } else { /* (!((MCG->C1 & MCG_C1_IREFS_MASK) == 0x00U)) */
-        MCGOUTClock = CPU_INT_SLOW_CLK_HZ; /* The slow internal reference clock is selected */
-      } /* (!((MCG->C1 & MCG_C1_IREFS_MASK) == 0x00U)) */
-      /* Select correct multiplier to calculate the MCG output clock  */
-      switch (MCG->C4 & (MCG_C4_DMX32_MASK | MCG_C4_DRST_DRS_MASK)) {
-        case 0x00U:
-          MCGOUTClock *= 640U;
-          break;
-        case 0x20U:
-          MCGOUTClock *= 1280U;
-          break;
-        case 0x40U:
-          MCGOUTClock *= 1920U;
-          break;
-        case 0x60U:
-          MCGOUTClock *= 2560U;
-          break;
-        case 0x80U:
-          MCGOUTClock *= 732U;
-          break;
-        case 0xA0U:
-          MCGOUTClock *= 1464U;
-          break;
-        case 0xC0U:
-          MCGOUTClock *= 2197U;
-          break;
-        case 0xE0U:
-          MCGOUTClock *= 2929U;
-          break;
-        default:
-          MCGOUTClock *= 640U;
-          break;
-      }
-    } else { /* (!((MCG->C6 & MCG_C6_PLLS_MASK) == 0x00U)) */
-      if ((MCG->C11 & MCG_C11_PLLCS_MASK) == 0x00U) {
-        /* PLL is selected */
-        Divider = (((uint16_t)MCG->C5 & MCG_C5_PRDIV_MASK) + 0x01U);
-        MCGOUTClock = (uint32_t)(CPU_XTAL_CLK_HZ / Divider); /* Calculate the PLL reference clock */
-        Divider = (((uint16_t)MCG->C6 & MCG_C6_VDIV_MASK) + 16U);
-        MCGOUTClock *= Divider;        /* Calculate the VCO output clock */
-        MCGOUTClock /= 2U;             /* Calculate the MCG output clock */
-      } else {
-        /* External PLL is selected */
-        if ((USBPHY->ANACTRL & USBPHY_ANACTRL_PFD_CLK_SEL_MASK) == 0x00U) {
-          MCGOUTClock = CPU_XTAL_CLK_HZ;
-        } else {
-          Divider = (((uint16_t)USBPHY->ANACTRL & USBPHY_ANACTRL_PFD_FRAC_MASK) >> 4);
-          if ((USBPHY->ANACTRL & USBPHY_ANACTRL_PFD_CLK_SEL_MASK) == USBPHY_ANACTRL_PFD_CLK_SEL(1)) {
-            Divider *= 0x04U;
-          } else if ((USBPHY->ANACTRL & USBPHY_ANACTRL_PFD_CLK_SEL_MASK) == USBPHY_ANACTRL_PFD_CLK_SEL(2)) {
-            Divider *= 0x02U;
-          } else {
-            Divider *= 0x01U;
-          }
-          MCGOUTClock = (uint32_t)(480000000U / Divider);
-          MCGOUTClock *= 18;
-        }
-      }
-    } /* (!((MCG->C6 & MCG_C6_PLLS_MASK) == 0x00U)) */
-  } else if ((MCG->C1 & MCG_C1_CLKS_MASK) == 0x40U) {
-    /* Internal reference clock is selected */
-    if ((MCG->C2 & MCG_C2_IRCS_MASK) == 0x00U) {
-      MCGOUTClock = CPU_INT_SLOW_CLK_HZ; /* Slow internal reference clock selected */
-    } else { /* (!((MCG->C2 & MCG_C2_IRCS_MASK) == 0x00U)) */
-      Divider = (uint16_t)(0x01LU << ((MCG->SC & MCG_SC_FCRDIV_MASK) >> MCG_SC_FCRDIV_SHIFT));
-      MCGOUTClock = (uint32_t) (CPU_INT_FAST_CLK_HZ / Divider); /* Fast internal reference clock selected */
-    } /* (!((MCG->C2 & MCG_C2_IRCS_MASK) == 0x00U)) */
-  } else if ((MCG->C1 & MCG_C1_CLKS_MASK) == 0x80U) {
-    /* External reference clock is selected */
-    switch (MCG->C7 & MCG_C7_OSCSEL_MASK) {
-    case 0x00U:
-      MCGOUTClock = CPU_XTAL_CLK_HZ;   /* System oscillator drives MCG clock */
-      break;
-    case 0x01U:
-      MCGOUTClock = CPU_XTAL32k_CLK_HZ; /* RTC 32 kHz oscillator drives MCG clock */
-      break;
-    case 0x02U:
-    default:
-      MCGOUTClock = CPU_INT_IRC_CLK_HZ; /* IRC 48MHz oscillator drives MCG clock */
-      break;
+        {
+            temp_clkdiv = (uint32_t)0x01260000u;
+            temp_c5 = MCG_C5_PRDIV0(5-1);
+            temp_c6 = MCG_C6_PLLS(1) | MCG_C6_VDIV(36-16);
+            
+        }break;
+        
     }
-  } else { /* (!((MCG->C1 & MCG_C1_CLKS_MASK) == 0x80U)) */
-    /* Reserved value */
-    return;
-  } /* (!((MCG->C1 & MCG_C1_CLKS_MASK) == 0x80U)) */
-  SystemCoreClock = (MCGOUTClock / (0x01U + ((SIM->CLKDIV1 & SIM_CLKDIV1_OUTDIV1_MASK) >> SIM_CLKDIV1_OUTDIV1_SHIFT)));
+
+    SIM->CLKDIV1 = temp_clkdiv;                 
+	MCG->C5 = temp_c5;                          
+	MCG->C6 = temp_c6;                          
 }
 
-/* ----------------------------------------------------------------------------
-   -- SystemInitHook()
-   ---------------------------------------------------------------------------- */
 
-__attribute__ ((weak)) void SystemInitHook (void) {
-  /* Void implementation of the weak function. */
+void SYSTEM_CLK(void)
+{
+	uint32 temp_reg;
+    
+    // Switch to FBE Mode
+	SIM->CLKDIV1 = (uint32_t)0xffffffffu;    			// 预分频寄存器，先都设置为1
+	OSC->CR = (uint8_t)0x80u;                           // 启用外部晶振
+	MCG->C2 &= ~MCG_C2_LP_MASK;							// 外部晶振是有源的时候不要置位MCG_C2_EREFS0_MASK ，这样才能使用A19引脚
+	MCG->C2 |= MCG_C2_RANGE0(2);
+
+	MCG->C1 = (uint8_t)0xBAu;                           // 选择外部时钟作为MCGOUTCLK的输入源，1536分频，FLL输入源为外部时钟，启用MCGIRCLK，内部参考时钟在停止模式下禁止
+	MCG->C4 &= (uint8_t)~(uint8_t)0xE0u;
+	MCG->C6 &= (uint8_t)( ~(uint8_t)MCG_C6_PLLS_MASK ); // MCG的输入源选择FLL
+	while((MCG->S & MCG_S_IREFST_MASK) != 0u) {  }      // 等待，直到FLL的时钟源是外部时钟
+	while((MCG->S & MCG_S_CLKST_MASK) != 0x08u) {  }    // 等待，MCGOUTCLK的时钟源被选择为外部时钟
+	
+    
+    //保存寄存器值
+    temp_reg = FMC->PFAPR;
+
+    //设置M0PFD至M7PFD为1，禁用预取功能
+    FMC->PFAPR |= FMC_PFAPR_M7PFD_MASK | FMC_PFAPR_M6PFD_MASK | FMC_PFAPR_M5PFD_MASK
+                 | FMC_PFAPR_M4PFD_MASK | FMC_PFAPR_M3PFD_MASK | FMC_PFAPR_M2PFD_MASK
+                 | FMC_PFAPR_M1PFD_MASK | FMC_PFAPR_M0PFD_MASK;
+    
+	
+    // Switch to PBE Mode 
+	div_set();
+	//恢复寄存器的值
+    FMC->PFAPR = temp_reg; 
+    
+	while((MCG->S & MCG_S_PLLST_MASK) == 0u) {  }       // Wait until the source of the PLLS clock has switched to the PLL 
+	while((MCG->S & MCG_S_LOCK0_MASK) == 0u) {  }       // Wait until locked 
+	
+	// Switch to PEE Mode 
+	MCG->C1 = (uint8_t)0x1Au;
+	while((MCG->S & 0x0Cu) != 0x0Cu) {  }               // Wait until output of the PLL is selected 
+	while((MCG->S & MCG_S_LOCK0_MASK) == 0u) {  }       // Wait until locked
 }
+
+void Start (void) 
+{
+    SCB->CPACR |= ((3UL << 10*2) | (3UL << 11*2));      // set CP10, CP11 Full Access
+    
+    Disable_Wdog();
+    SYSTEM_CLK();
+	gpio_init(A4,GPO,1);  //初始化为输出1，即 禁用了 NMI 中断
+}
+
+
+
+void NMI_Handler(void)
+{
+	
+}
+
+
